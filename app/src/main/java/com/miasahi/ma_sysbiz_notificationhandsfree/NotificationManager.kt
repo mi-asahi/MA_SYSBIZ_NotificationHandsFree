@@ -1,6 +1,8 @@
 package com.miasahi.ma_sysbiz_notificationhandsfree
 
 import android.app.Notification
+import android.content.pm.PackageManager
+import android.os.Build
 import android.service.notification.NotificationListenerService
 import android.service.notification.StatusBarNotification
 import android.speech.tts.TextToSpeech
@@ -104,9 +106,14 @@ class MyNotificationListenerService : NotificationListenerService(), TextToSpeec
         else AppHandleType.NOTIFICATION_ONLY
     }
 
-    @Suppress("DEPRECATION")
+
     private fun getAppName(packageName: String): String {
-        val appInfo = packageManager.getApplicationInfo(packageName, 0)
+        val appInfo = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+            packageManager.getApplicationInfo(packageName, PackageManager.ApplicationInfoFlags.of(0))
+        } else {
+            @Suppress("DEPRECATION")
+            packageManager.getApplicationInfo(packageName,0)
+        }
         val appName = packageManager.getApplicationLabel(appInfo)
         return appName.toString()
     }

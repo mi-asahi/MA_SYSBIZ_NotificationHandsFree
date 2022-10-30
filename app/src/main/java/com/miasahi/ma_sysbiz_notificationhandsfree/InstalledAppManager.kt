@@ -3,6 +3,7 @@ package com.miasahi.ma_sysbiz_notificationhandsfree
 import android.content.Context
 import android.content.pm.PackageManager
 import android.graphics.drawable.Drawable
+import android.os.Build
 import android.util.Log
 
 data class AppInfo(
@@ -22,17 +23,31 @@ object InstalledAppManager {
     private val defaultFilter: (AppInfo) -> Boolean = { it.permissions.contains(kTargetPermission) }
     var appInfos: List<AppInfo> = listOf()
 
-
-    @Suppress("DEPRECATION")
     fun initialize(context: Context) {
         val pm = context.packageManager
-        val packages = pm.getInstalledApplications(PackageManager.GET_META_DATA)
+        val packages = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+            pm.getInstalledApplications(
+                PackageManager.ApplicationInfoFlags.of(PackageManager.GET_META_DATA.toLong())
+            )
+        } else {
+            @Suppress("DEPRECATION")
+            pm.getInstalledApplications(PackageManager.GET_META_DATA)
+        }
+
 
         appInfos = packages.map {
             val packageName = it.packageName
             val displayName = it.loadLabel(pm).toString()
             val icon = it.loadIcon(pm)
-            val packageInfo = pm.getPackageInfo(it.packageName, PackageManager.GET_PERMISSIONS)
+            val packageInfo = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+                pm.getPackageInfo(
+                    it.packageName,
+                    PackageManager.PackageInfoFlags.of(PackageManager.GET_PERMISSIONS.toLong())
+                )
+            } else {
+                @Suppress("DEPRECATION")
+                pm.getPackageInfo(it.packageName, PackageManager.GET_PERMISSIONS)
+            }
             val permissions: List<String> = if (packageInfo.requestedPermissions == null) listOf()
             else packageInfo.requestedPermissions.toList()
             AppInfo(
