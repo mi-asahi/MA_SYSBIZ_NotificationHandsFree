@@ -1,5 +1,7 @@
 package com.miasahi.ma_sysbiz_notificationhandsfree.ui.screen
 
+import android.graphics.drawable.Drawable
+import android.util.Log
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
@@ -7,27 +9,31 @@ import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.*
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.Settings
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.asImageBitmap
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.style.TextAlign
-import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.DpOffset
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.core.graphics.drawable.toBitmap
+import com.miasahi.ma_sysbiz_notificationhandsfree.InstalledAppManager
 import com.miasahi.ma_sysbiz_notificationhandsfree.data.*
-import com.miasahi.ma_sysbiz_notificationhandsfree.screen.WithAppTheme
+import com.miasahi.ma_sysbiz_notificationhandsfree.database.entity.ListAndSetting
+import com.miasahi.ma_sysbiz_notificationhandsfree.database.entity.ListInfo
+import com.miasahi.ma_sysbiz_notificationhandsfree.database.entity.SettingInfo
 import com.miasahi.ma_sysbiz_notificationhandsfree.ui.state.rememberListSettingScreenState
 
-
+private const val TAG = "ListSettingScreen"
 @Composable
-fun ListSettingScreen(mainListItem: MainListItem, onSave: (MainListItem) -> Unit) {
-    val screenState = rememberListSettingScreenState(initValue = mainListItem)
+fun ListSettingScreen(listAndSetting: ListAndSetting, onSave: (ListInfo,List<SettingInfo>) -> Unit) {
+    Log.d(TAG, "[Show] list:${listAndSetting.list}")
+    val screenState = rememberListSettingScreenState(initValue = listAndSetting)
+
     Box(
         modifier = Modifier
             .fillMaxHeight(fraction = 0.95f)
@@ -38,16 +44,18 @@ fun ListSettingScreen(mainListItem: MainListItem, onSave: (MainListItem) -> Unit
         Column(
             modifier = Modifier.fillMaxSize()
         ) {
-            TitleRow(onSave = { onSave(screenState.mainListItem) })
-            NameRow(name = screenState.mainListItem.name, onEdit = screenState.changeName)
+            TitleRow(onSave = {
+                onSave(screenState.listInfo, screenState.settingInfos)
+            })
+            NameRow(name = screenState.listInfo.name, onEdit = screenState.onChangeName)
             HandleTypeDropDown(
-                handleType = screenState.mainListItem.handleType,
-                onChanged = screenState.changeHandleType,
+                handleType = screenState.listInfo.handleType,
+                onChanged = screenState.onChangeHandleType,
             )
             Spacer(modifier = Modifier.height(50.dp))
-            appSettingList(
-                listItems = screenState.mainListItem.appItems,
-                onEdit = screenState.changeAppSetting,
+            AppSettingList(
+                enabledPackages = screenState.settingInfos.map { it.packageName }.toList(),
+                onEdit = screenState.onChangeAppSetting,
             )
         }
     }
@@ -115,7 +123,7 @@ fun HandleTypeRow(text: String, onClick: () -> Unit) {
             ),
             onClick = onClick
         ) {
-            appHandleTypeSettingRow(text)
+            AppHandleTypeSettingRow(text)
         }
         Spacer(modifier = Modifier.weight(1f))
     }
@@ -123,7 +131,7 @@ fun HandleTypeRow(text: String, onClick: () -> Unit) {
 
 @Composable
 fun HandleTypeDropDown(handleType: AppHandleType, onChanged: (AppHandleType) -> Unit) {
-    var isShown = remember {
+    val isShown = remember {
         mutableStateOf(false)
     }
     Box(
@@ -153,7 +161,7 @@ fun HandleTypeDropDown(handleType: AppHandleType, onChanged: (AppHandleType) -> 
                         },
                         modifier = Modifier.width(302.dp),
                     ) {
-                        appHandleTypeSettingRow(type.text())
+                        AppHandleTypeSettingRow(type.text())
                     }
                 }
 
@@ -162,7 +170,7 @@ fun HandleTypeDropDown(handleType: AppHandleType, onChanged: (AppHandleType) -> 
 }
 
 @Composable
-fun appHandleTypeSettingRow(text: String) {
+fun AppHandleTypeSettingRow(text: String) {
     Row {
         Text(
             text = text,
@@ -178,28 +186,40 @@ fun appHandleTypeSettingRow(text: String) {
 }
 
 @Composable
-fun appSettingList(listItems: List<AppSettingItem>, onEdit: (Int, Boolean) -> Unit) {
+fun AppSettingList(enabledPackages: List<String>, onEdit: (String, Boolean) -> Unit) {
+    val apps = InstalledAppManager.appInfos
     LazyColumn() {
-        items(listItems.size) { index ->
+        items(apps.size) { index ->
             TabRowDefaults.Divider(thickness = 1.dp, color = Color(0xFFEAEAEA))
-            appSettingListItem(listItems[index], onEdit = { value -> onEdit(index, value) })
+            AppSettingListItem(
+                appName = apps[index].displayName,
+                icon = apps[index].icon,
+                packageName = apps[index].packageName,
+                enable = enabledPackages.contains(apps[index].packageName),
+                onEdit = onEdit
+            )
         }
     }
 }
 
 @Composable
-fun appSettingListItem(listItem: AppSettingItem, onEdit: (Boolean) -> Unit) {
+fun AppSettingListItem(
+    appName: String,
+    icon: Drawable,
+    packageName: String,
+    enable: Boolean,
+    onEdit: (String, Boolean) -> Unit
+) {
     Row(
         modifier = Modifier
             .height(50.dp)
             .padding(vertical = 8.dp, horizontal = 20.dp),
         verticalAlignment = Alignment.CenterVertically
     ) {
-
-        Image(imageVector = Icons.Filled.Settings, contentDescription = "")
+        Image(bitmap = icon.toBitmap().asImageBitmap(), contentDescription = "")
         Spacer(modifier = Modifier.width(18.dp))
         Text(
-            text = listItem.packageName,
+            text = appName,
             fontSize = 14.sp,
             textAlign = TextAlign.Start,
             modifier = Modifier
@@ -207,31 +227,33 @@ fun appSettingListItem(listItem: AppSettingItem, onEdit: (Boolean) -> Unit) {
                 .weight(1f)
         )
 
-        Switch(checked = listItem.isOn, onCheckedChange = onEdit)
+        Switch(checked = enable, onCheckedChange = { value ->
+            onEdit(packageName, value)
+        })
 
     }
 }
+//
+//@Composable
+//fun TempBody(onClick: () -> Unit) {
+//    Box(
+//        modifier = Modifier.fillMaxSize(),
+//        contentAlignment = Alignment.Center
+//    ) {
+//        Button(onClick = onClick) {
+//            Text(text = "showSheet")
+//        }
+//    }
+//
+//}
 
-@Composable
-fun TempBody(onClick: () -> Unit) {
-    Box(
-        modifier = Modifier.fillMaxSize(),
-        contentAlignment = Alignment.Center
-    ) {
-        Button(onClick = onClick) {
-            Text(text = "showSheet")
-        }
-    }
-
-}
-
-@Preview(showBackground = true)
-@Composable
-fun ListSettingScreenPreview() {
-    WithAppTheme {
-        ListSettingScreen(
-            mainListItem = sampleMainListData.first(),
-            onSave = { _ -> },
-        )
-    }
-}
+//@Preview(showBackground = true)
+//@Composable
+//fun ListSettingScreenPreview() {
+//    WithAppTheme {
+//        ListSettingScreen(
+//            mainListItem = sampleMainListData.first(),
+//            onSave = { _ -> },
+//        )
+//    }
+//}
