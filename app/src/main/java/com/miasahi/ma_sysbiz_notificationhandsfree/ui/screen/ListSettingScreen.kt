@@ -5,6 +5,7 @@ import android.util.Log
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
+import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -15,6 +16,8 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.asImageBitmap
+import androidx.compose.ui.input.pointer.pointerInput
+import androidx.compose.ui.platform.LocalFocusManager
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.DpOffset
@@ -27,19 +30,30 @@ import com.miasahi.ma_sysbiz_notificationhandsfree.database.entity.ListAndSettin
 import com.miasahi.ma_sysbiz_notificationhandsfree.database.entity.ListInfo
 import com.miasahi.ma_sysbiz_notificationhandsfree.database.entity.SettingInfo
 import com.miasahi.ma_sysbiz_notificationhandsfree.ui.state.rememberListSettingScreenState
+import com.miasahi.ma_sysbiz_notificationhandsfree.ui.theme.defaultSwitchColors
 
 private const val TAG = "ListSettingScreen"
+
 @Composable
-fun ListSettingScreen(listAndSetting: ListAndSetting, onSave: (ListInfo,List<SettingInfo>) -> Unit) {
+fun ListSettingScreen(
+    listAndSetting: ListAndSetting,
+    onSave: (ListInfo, List<SettingInfo>) -> Unit
+) {
     Log.d(TAG, "[Show] list:${listAndSetting.list}")
     val screenState = rememberListSettingScreenState(initValue = listAndSetting)
-
+    val localFocusManager = LocalFocusManager.current
     Box(
         modifier = Modifier
             .fillMaxHeight(fraction = 0.95f)
             .fillMaxWidth()
             .clip(RoundedCornerShape(topStart = 18.dp, topEnd = 18.dp))
-            .background(Color.White), contentAlignment = Alignment.Center
+            .background(MaterialTheme.colors.surface)
+            .pointerInput(1) {
+                detectTapGestures(onTap = {
+                    localFocusManager.clearFocus()
+                })
+            },
+        contentAlignment = Alignment.Center
     ) {
         Column(
             modifier = Modifier.fillMaxSize()
@@ -68,15 +82,15 @@ fun TitleRow(onSave: () -> Unit) {
         modifier = Modifier.padding(horizontal = 5.dp),
         verticalAlignment = Alignment.CenterVertically
     ) {
-        Text(text = "リストタイトル")
+        Text(text = "リストタイトル", color = MaterialTheme.colors.primary)
         Spacer(modifier = Modifier.weight(1f))
         Button(
             modifier = Modifier
                 .padding(1.dp),
             //border = BorderStroke(1.dp, Color.Gray),
             colors = ButtonDefaults.outlinedButtonColors(
-                contentColor = Color.Black,
-                backgroundColor = Color.White
+                contentColor = MaterialTheme.colors.primary,
+                backgroundColor = MaterialTheme.colors.surface
             ),
             onClick = onSave
         ) {
@@ -101,7 +115,10 @@ fun NameRow(name: String, onEdit: (String) -> Unit) {
                 fontSize = 14.sp,
             ),
             placeholder = { Text("リスト名を入力してください") },
-            onValueChange = { value -> onEdit(value) }
+            onValueChange = { value -> onEdit(value) },
+            colors = TextFieldDefaults.outlinedTextFieldColors(
+                textColor = MaterialTheme.colors.primary,
+            )
         )
         Spacer(modifier = Modifier.weight(1f))
     }
@@ -116,10 +133,12 @@ fun HandleTypeRow(text: String, onClick: () -> Unit) {
         Button(
             modifier = Modifier
                 .width(302.dp),
-            border = BorderStroke(1.dp, Color.Gray),
+            border = BorderStroke(
+                1.dp,
+                MaterialTheme.colors.onSurface.copy(alpha = ContentAlpha.disabled)
+            ),
             colors = ButtonDefaults.outlinedButtonColors(
-                contentColor = Color.Black,
-                backgroundColor = Color.White
+                backgroundColor = MaterialTheme.colors.surface
             ),
             onClick = onClick
         ) {
@@ -149,7 +168,7 @@ fun HandleTypeDropDown(handleType: AppHandleType, onChanged: (AppHandleType) -> 
             offset = DpOffset(x = 5.dp, y = 0.dp),
             modifier = Modifier
                 .wrapContentSize()
-                .background(Color.White),
+                .background(MaterialTheme.colors.surface),
         ) {
             AppHandleType.values()
                 .filter { it != handleType }
@@ -176,6 +195,7 @@ fun AppHandleTypeSettingRow(text: String) {
             text = text,
             textAlign = TextAlign.Start,
             fontSize = 14.sp,
+            color = MaterialTheme.colors.primary,
         )
         Spacer(
             modifier = Modifier
@@ -224,12 +244,16 @@ fun AppSettingListItem(
             textAlign = TextAlign.Start,
             modifier = Modifier
                 .fillMaxWidth()
-                .weight(1f)
+                .weight(1f),
+            color = MaterialTheme.colors.primary,
         )
 
-        Switch(checked = enable, onCheckedChange = { value ->
-            onEdit(packageName, value)
-        })
+        Switch(
+            checked = enable, onCheckedChange = { value ->
+                onEdit(packageName, value)
+            },
+            colors = defaultSwitchColors()
+        )
 
     }
 }

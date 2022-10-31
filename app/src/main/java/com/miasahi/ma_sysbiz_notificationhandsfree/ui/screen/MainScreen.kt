@@ -25,6 +25,7 @@ import com.miasahi.ma_sysbiz_notificationhandsfree.database.dao.SettingInfoDao
 import com.miasahi.ma_sysbiz_notificationhandsfree.database.entity.ListAndSetting
 import com.miasahi.ma_sysbiz_notificationhandsfree.database.entity.ListInfo
 import com.miasahi.ma_sysbiz_notificationhandsfree.ui.state.rememberMainScreenState
+import com.miasahi.ma_sysbiz_notificationhandsfree.ui.theme.defaultSwitchColors
 import kotlinx.coroutines.launch
 
 private const val TAG = "MainScreen"
@@ -81,7 +82,7 @@ fun MainList(
         LazyColumn(
             modifier = Modifier
                 .clip(shape = RoundedCornerShape(4.dp))
-                .background(color = Color.White)
+                .background(color = MaterialTheme.colors.surface)
                 .fillMaxSize()
         ) {
             items(listItems.size) { index ->
@@ -91,7 +92,10 @@ fun MainList(
                     onClick = { onClick(listItems[index]) }
                 )
                 if (index != listItems.lastIndex)
-                    TabRowDefaults.Divider(thickness = 1.dp, color = Color(0xFFEAEAEA))
+                    TabRowDefaults.Divider(
+                        thickness = 1.dp,
+                        color = MaterialTheme.colors.background
+                    )
             }
         }
     }
@@ -107,9 +111,13 @@ fun MainListRow(item: ListInfo, onChange: (Boolean) -> Unit, onClick: () -> Unit
             .clickable(enabled = item.enabled, onClick = onClick),
         verticalAlignment = Alignment.CenterVertically,
     ) {
-        Text(text = item.name)
+        Text(text = item.name, color = MaterialTheme.colors.primary)
         Spacer(modifier = Modifier.weight(1f))
-        Switch(checked = item.enabled, onCheckedChange = onChange)
+        Switch(
+            checked = item.enabled,
+            onCheckedChange = onChange,
+            colors = defaultSwitchColors(),
+        )
     }
 }
 

@@ -50,7 +50,7 @@ fun App(listInfoDao: ListInfoDao, settingInfoDao: SettingInfoDao) {
                         onShowBottomSheet(true)
                     })
             },
-            onDismiss = { listAndSetting.value = null}
+            onDismiss = { listAndSetting.value = null }
         )
     }
 }
@@ -81,7 +81,7 @@ fun WithScaffold(
         bottomSheetState = rememberBottomSheetState(
             initialValue = BottomSheetValue.Collapsed,
             confirmStateChange = {
-                if(it == BottomSheetValue.Collapsed){
+                if (it == BottomSheetValue.Collapsed) {
                     onDismiss()
                 }
                 true
@@ -89,8 +89,12 @@ fun WithScaffold(
         ),
     )
     val defaultListAndSetting = ListAndSetting(
-        list = ListInfo(id = -1, name = "", enabled = false, handleType = AppHandleType.NOTIFICATION_ONLY)
-    , settings = listOf()
+        list = ListInfo(
+            id = -1,
+            name = "",
+            enabled = false,
+            handleType = AppHandleType.NOTIFICATION_ONLY
+        ), settings = listOf()
     )
     BottomSheetScaffold(
         scaffoldState = scaffoldState,
