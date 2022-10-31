@@ -12,6 +12,6 @@ val Gray = Color(0xFFC4C4C4)
 fun defaultSwitchColors() = SwitchDefaults.colors(
     checkedThumbColor = Color.White,
     uncheckedThumbColor = Color.White,
-    checkedTrackColor = Color(0xff56C568),
+    checkedTrackColor = Color(0xFF027715),
     uncheckedTrackColor = Color(0xffC4C4C4),
 )
