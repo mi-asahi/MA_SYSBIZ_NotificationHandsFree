@@ -35,6 +35,7 @@ class MyNotificationListenerService : NotificationListenerService(), TextToSpeec
     override fun onDestroy() {
         textToSpeech?.shutdown()
         scope.cancel()
+        db.close()
         super.onDestroy()
     }
 
@@ -56,8 +57,10 @@ class MyNotificationListenerService : NotificationListenerService(), TextToSpeec
         }
         textToSpeech?.let { tts ->
             val locale = Locale.getDefault()
+            Log.d(TAG,"[tts] availableLanguages:${tts.availableLanguages}")
             if (tts.isLanguageAvailable(locale) > TextToSpeech.LANG_AVAILABLE) {
                 tts.language = locale
+                Log.d(TAG, "[tts] language set($locale).")
             } else {
                 Log.w(TAG, "[tts] language setting failed.")
             }

@@ -39,6 +39,10 @@ class MainActivity : ComponentActivity() {
         checkPermission()
     }
 
+    override fun onDestroy() {
+        db.close()
+        super.onDestroy()
+    }
     private fun initDatabase() {
         this.db = Room.databaseBuilder(
             applicationContext,
