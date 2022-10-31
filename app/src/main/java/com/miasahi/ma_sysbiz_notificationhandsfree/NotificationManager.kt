@@ -135,7 +135,7 @@ class MyNotificationListenerService : NotificationListenerService(), TextToSpeec
         val audioManager = this.getSystemService(Context.AUDIO_SERVICE) as AudioManager
         val devices =  audioManager.getDevices(AudioManager.GET_DEVICES_OUTPUTS)
             .filter { it.type == AudioDeviceInfo.TYPE_BLUETOOTH_A2DP}
-            .filter { it.productName.contains("NISSAN", ignoreCase = true) }
+            //.filter { it.productName.contains("NISSAN", ignoreCase = true) }
         Log.d(TAG, "devices:${devices.map { "${it.productName} type:${it.type}" }}")
         return devices.isNotEmpty()
     }
