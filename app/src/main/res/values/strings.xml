@@ -1,4 +1,4 @@
 <resources>
-    <string name="app_name">MA_SYSBIZ_NotificationHandsFree</string>
-    <string name="title_activity_main">MainActivity</string>
+    <string name="app_name">Notification-To-Speech</string>
+    <string name="title_activity_main">Notification-To-Speech</string>
 </resources>
