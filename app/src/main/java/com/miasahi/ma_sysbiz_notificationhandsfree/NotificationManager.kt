@@ -1,7 +1,10 @@
 package com.miasahi.ma_sysbiz_notificationhandsfree
 
 import android.app.Notification
+import android.content.Context
 import android.content.pm.PackageManager
+import android.media.AudioDeviceInfo
+import android.media.AudioManager
 import android.os.Build
 import android.service.notification.NotificationListenerService
 import android.service.notification.StatusBarNotification
@@ -39,6 +42,7 @@ class MyNotificationListenerService : NotificationListenerService(), TextToSpeec
         super.onNotificationPosted(sbn)
         val notificationFlags = sbn.notification.flags
         if (notificationFlags and Notification.FLAG_GROUP_SUMMARY != 0) return
+        if (checkBluetoothDeviceConnected()) return
 
         Log.d(TAG,"[onNotificationPosted] ${sbn.packageName}")
         scope.launch {
@@ -127,7 +131,14 @@ class MyNotificationListenerService : NotificationListenerService(), TextToSpeec
         this.listInfoDao = db.listInfoDao()
         this.settingInfoDao = db.settingInfoDao()
     }
-
+    private fun checkBluetoothDeviceConnected():Boolean{
+        val audioManager = this.getSystemService(Context.AUDIO_SERVICE) as AudioManager
+        val devices =  audioManager.getDevices(AudioManager.GET_DEVICES_OUTPUTS)
+            .filter { it.type == AudioDeviceInfo.TYPE_BLUETOOTH_A2DP}
+            .filter { it.productName.contains("NISSAN", ignoreCase = true) }
+        Log.d(TAG, "devices:${devices.map { "${it.productName} type:${it.type}" }}")
+        return devices.isNotEmpty()
+    }
     companion object {
         const val TAG = "MyNotificationListenerService"
     }
