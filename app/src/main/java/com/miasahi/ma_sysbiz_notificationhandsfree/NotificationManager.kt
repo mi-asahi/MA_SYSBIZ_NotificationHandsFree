@@ -42,7 +42,7 @@ class MyNotificationListenerService : NotificationListenerService(), TextToSpeec
         super.onNotificationPosted(sbn)
         val notificationFlags = sbn.notification.flags
         if (notificationFlags and Notification.FLAG_GROUP_SUMMARY != 0) return
-        if (checkBluetoothDeviceConnected()) return
+        if (!checkBluetoothDeviceConnected()) return
 
         Log.d(TAG,"[onNotificationPosted] ${sbn.packageName}")
         scope.launch {
