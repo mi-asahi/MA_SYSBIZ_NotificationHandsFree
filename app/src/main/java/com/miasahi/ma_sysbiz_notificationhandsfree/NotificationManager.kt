@@ -4,11 +4,13 @@ import android.app.Notification
 import android.content.Context
 import android.content.pm.PackageManager
 import android.media.AudioDeviceInfo
+import android.media.AudioFocusRequest
 import android.media.AudioManager
 import android.os.Build
 import android.service.notification.NotificationListenerService
 import android.service.notification.StatusBarNotification
 import android.speech.tts.TextToSpeech
+import android.speech.tts.UtteranceProgressListener
 import android.util.Log
 import androidx.room.Room
 import com.miasahi.ma_sysbiz_notificationhandsfree.data.AppHandleType
@@ -18,6 +20,7 @@ import com.miasahi.ma_sysbiz_notificationhandsfree.database.dao.SettingInfoDao
 import kotlinx.coroutines.*
 import java.util.*
 
+
 class MyNotificationListenerService : NotificationListenerService(), TextToSpeech.OnInitListener {
     private var textToSpeech: TextToSpeech? = null
     private lateinit var db: AppDatabase
@@ -25,10 +28,35 @@ class MyNotificationListenerService : NotificationListenerService(), TextToSpeec
     private lateinit var settingInfoDao: SettingInfoDao
     private val job = SupervisorJob()
     private val scope = CoroutineScope(Dispatchers.IO + job)
+    private val audioFocusRequest =
+        AudioFocusRequest.Builder(AudioManager.AUDIOFOCUS_GAIN_TRANSIENT_MAY_DUCK)
+            .setAcceptsDelayedFocusGain(false).setWillPauseWhenDucked(false).build()
 
     override fun onCreate() {
         super.onCreate()
         textToSpeech = TextToSpeech(this, this)
+        textToSpeech?.setOnUtteranceProgressListener(object : UtteranceProgressListener() {
+            override fun onStart(utteranceId: String?) {
+                Log.d(TAG, "[UtteranceProgressListener] onStart:$utteranceId")
+
+
+                val am = getSystemService(AUDIO_SERVICE) as AudioManager
+                am.requestAudioFocus(audioFocusRequest)
+            }
+
+            override fun onDone(utteranceId: String?) {
+                Log.d(TAG, "[UtteranceProgressListener] onDone:$utteranceId")
+                val am = getSystemService(AUDIO_SERVICE) as AudioManager
+                am.abandonAudioFocusRequest(audioFocusRequest)
+            }
+
+            @Deprecated("Deprecated in Java")
+            override fun onError(utteranceId: String?) {
+                Log.d(TAG, "[UtteranceProgressListener] onError:$utteranceId")
+                val am = getSystemService(AUDIO_SERVICE) as AudioManager
+                am.abandonAudioFocusRequest(audioFocusRequest)
+            }
+        })
         initDatabase()
     }
 
@@ -45,7 +73,7 @@ class MyNotificationListenerService : NotificationListenerService(), TextToSpeec
         if (notificationFlags and Notification.FLAG_GROUP_SUMMARY != 0) return
         if (!checkBluetoothDeviceConnected()) return
 
-        Log.d(TAG,"[onNotificationPosted] ${sbn.packageName}")
+        Log.d(TAG, "[onNotificationPosted] ${sbn.packageName}")
         scope.launch {
             handleNotification(sbn)
         }
@@ -57,7 +85,7 @@ class MyNotificationListenerService : NotificationListenerService(), TextToSpeec
         }
         textToSpeech?.let { tts ->
             val locale = Locale.getDefault()
-            Log.d(TAG,"[tts] availableLanguages:${tts.availableLanguages}")
+            Log.d(TAG, "[tts] availableLanguages:${tts.availableLanguages}")
             if (tts.isLanguageAvailable(locale) > TextToSpeech.LANG_AVAILABLE) {
                 tts.language = locale
                 Log.d(TAG, "[tts] language set($locale).")
@@ -67,9 +95,9 @@ class MyNotificationListenerService : NotificationListenerService(), TextToSpeec
         }
     }
 
-    private suspend fun handleNotification(sbn: StatusBarNotification){
+    private suspend fun handleNotification(sbn: StatusBarNotification) {
         val packageName = sbn.packageName
-        Log.d(TAG,"[handleNotification] IN ${sbn.packageName}")
+        Log.d(TAG, "[handleNotification] IN ${sbn.packageName}")
 
         val handleType = getHandleType(packageName) ?: return
 
@@ -79,19 +107,16 @@ class MyNotificationListenerService : NotificationListenerService(), TextToSpeec
         val title = extras.getString(Notification.EXTRA_TITLE)
         val text = extras.getCharSequence(Notification.EXTRA_TEXT)
 
-        val speakText = if (handleType == AppHandleType.NOTIFICATION_ONLY)
-            "${appName}で${title}からメッセージが届きました。"
-        else
-            "${appName}で${title}からメッセージが届きました。$text"
+        val speakText =
+            if (handleType == AppHandleType.NOTIFICATION_ONLY) "${appName}で${title}からメッセージが届きました。"
+            else "${appName}で${title}からメッセージが届きました。$text"
         speak(speakText)
         Log.d(
-            TAG, "[handleNotification] appName:$appName " +
-                    "package:$packageName " +
-                    "handleType:$handleType " +
-                    "title:$title" +
-                    "text:$text"
+            TAG,
+            "[handleNotification] appName:$appName " + "package:$packageName " + "handleType:$handleType " + "title:$title" + "text:$text"
         )
     }
+
     private fun speak(text: String) {
         Log.w(TAG, "[tts] speak:$text.")
         textToSpeech?.speak(text, TextToSpeech.QUEUE_FLUSH, null, "utteranceId")
@@ -116,10 +141,11 @@ class MyNotificationListenerService : NotificationListenerService(), TextToSpeec
 
     private fun getAppName(packageName: String): String {
         val appInfo = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
-            packageManager.getApplicationInfo(packageName, PackageManager.ApplicationInfoFlags.of(0))
+            packageManager.getApplicationInfo(
+                packageName, PackageManager.ApplicationInfoFlags.of(0)
+            )
         } else {
-            @Suppress("DEPRECATION")
-            packageManager.getApplicationInfo(packageName,0)
+            @Suppress("DEPRECATION") packageManager.getApplicationInfo(packageName, 0)
         }
         val appName = packageManager.getApplicationLabel(appInfo)
         return appName.toString()
@@ -127,21 +153,21 @@ class MyNotificationListenerService : NotificationListenerService(), TextToSpeec
 
     private fun initDatabase() {
         this.db = Room.databaseBuilder(
-            applicationContext,
-            AppDatabase::class.java,
-            "app.db"
+            applicationContext, AppDatabase::class.java, "app.db"
         ).build()
         this.listInfoDao = db.listInfoDao()
         this.settingInfoDao = db.settingInfoDao()
     }
-    private fun checkBluetoothDeviceConnected():Boolean{
+
+    private fun checkBluetoothDeviceConnected(): Boolean {
         val audioManager = this.getSystemService(Context.AUDIO_SERVICE) as AudioManager
-        val devices =  audioManager.getDevices(AudioManager.GET_DEVICES_OUTPUTS)
-            .filter { it.type == AudioDeviceInfo.TYPE_BLUETOOTH_A2DP}
-            //.filter { it.productName.contains("NISSAN", ignoreCase = true) }
+        val devices = audioManager.getDevices(AudioManager.GET_DEVICES_OUTPUTS)
+            .filter { it.type == AudioDeviceInfo.TYPE_BLUETOOTH_A2DP }
+        //.filter { it.productName.contains("NISSAN", ignoreCase = true) }
         Log.d(TAG, "devices:${devices.map { "${it.productName} type:${it.type}" }}")
         return devices.isNotEmpty()
     }
+
     companion object {
         const val TAG = "MyNotificationListenerService"
     }
