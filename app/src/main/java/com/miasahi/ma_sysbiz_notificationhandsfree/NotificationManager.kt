@@ -19,6 +19,7 @@ import com.miasahi.ma_sysbiz_notificationhandsfree.database.dao.ListInfoDao
 import com.miasahi.ma_sysbiz_notificationhandsfree.database.dao.SettingInfoDao
 import kotlinx.coroutines.*
 import java.util.*
+import kotlin.collections.ArrayDeque
 
 
 class MyNotificationListenerService : NotificationListenerService(), TextToSpeech.OnInitListener {
@@ -32,26 +33,31 @@ class MyNotificationListenerService : NotificationListenerService(), TextToSpeec
         AudioFocusRequest.Builder(AudioManager.AUDIOFOCUS_GAIN_TRANSIENT_MAY_DUCK)
             .setAcceptsDelayedFocusGain(false).setWillPauseWhenDucked(false).build()
 
+    var messageQueue = ArrayDeque<String>()
+    var isSpeaking = false
     override fun onCreate() {
         super.onCreate()
         textToSpeech = TextToSpeech(this, this)
         textToSpeech?.setOnUtteranceProgressListener(object : UtteranceProgressListener() {
             override fun onStart(utteranceId: String?) {
                 Log.d(TAG, "[UtteranceProgressListener] onStart:$utteranceId")
-
+                isSpeaking = true
 
                 val am = getSystemService(AUDIO_SERVICE) as AudioManager
                 am.requestAudioFocus(audioFocusRequest)
             }
 
             override fun onDone(utteranceId: String?) {
+                isSpeaking = false
                 Log.d(TAG, "[UtteranceProgressListener] onDone:$utteranceId")
                 val am = getSystemService(AUDIO_SERVICE) as AudioManager
                 am.abandonAudioFocusRequest(audioFocusRequest)
+                speak()
             }
 
             @Deprecated("Deprecated in Java")
             override fun onError(utteranceId: String?) {
+                isSpeaking = false
                 Log.d(TAG, "[UtteranceProgressListener] onError:$utteranceId")
                 val am = getSystemService(AUDIO_SERVICE) as AudioManager
                 am.abandonAudioFocusRequest(audioFocusRequest)
@@ -110,16 +116,20 @@ class MyNotificationListenerService : NotificationListenerService(), TextToSpeec
         val speakText =
             if (handleType == AppHandleType.NOTIFICATION_ONLY) "${appName}で${title}からメッセージが届きました。"
             else "${appName}で${title}からメッセージが届きました。$text"
-        speak(speakText)
+        messageQueue.add(speakText)
+        speak()
         Log.d(
             TAG,
             "[handleNotification] appName:$appName " + "package:$packageName " + "handleType:$handleType " + "title:$title" + "text:$text"
         )
     }
 
-    private fun speak(text: String) {
-        Log.w(TAG, "[tts] speak:$text.")
-        textToSpeech?.speak(text, TextToSpeech.QUEUE_FLUSH, null, "utteranceId")
+
+    private fun speak(){
+        if (messageQueue.isEmpty() || isSpeaking) return
+        val message = messageQueue.removeFirst()
+        Log.w(TAG, "[tts] speak:$message.")
+        textToSpeech?.speak(message, TextToSpeech.QUEUE_FLUSH, null, "utteranceId")
     }
 
     private suspend fun getHandleType(packageName: String): AppHandleType? {

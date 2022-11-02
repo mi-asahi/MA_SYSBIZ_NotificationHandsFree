@@ -20,7 +20,7 @@ object InstalledAppManager {
             kTargetPermission
         )
     }
-    private val defaultFilter: (AppInfo) -> Boolean = { it.permissions.contains(kTargetPermission) }
+    //private val defaultFilter: (AppInfo) -> Boolean = { it.permissions.contains(kTargetPermission) }
     var appInfos: List<AppInfo> = listOf()
 
     fun initialize(context: Context) {
@@ -50,6 +50,7 @@ object InstalledAppManager {
             }
             val permissions: List<String> = if (packageInfo.requestedPermissions == null) listOf()
             else packageInfo.requestedPermissions.toList()
+
             AppInfo(
                 displayName = displayName,
                 packageName = packageName,
@@ -57,11 +58,13 @@ object InstalledAppManager {
                 permissions = permissions
             )
         }
+            .sortedBy { it.displayName }
             .sortedWith(comparator)
-            .filter(defaultFilter)
+
+            //.filter(defaultFilter)
         Log.d(TAG, "----------")
         appInfos.forEach {
-            Log.d(TAG, "$it")
+            Log.d(TAG, "### $it")
         }
         Log.d(TAG, "----------")
 
