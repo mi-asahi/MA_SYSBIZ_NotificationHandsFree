@@ -9,11 +9,9 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
-import com.miasahi.ma_sysbiz_notificationhandsfree.data.AppHandleType
 import com.miasahi.ma_sysbiz_notificationhandsfree.database.dao.ListInfoDao
 import com.miasahi.ma_sysbiz_notificationhandsfree.database.dao.SettingInfoDao
 import com.miasahi.ma_sysbiz_notificationhandsfree.database.entity.ListAndSetting
-import com.miasahi.ma_sysbiz_notificationhandsfree.database.entity.ListInfo
 import com.miasahi.ma_sysbiz_notificationhandsfree.ui.theme.AppTheme
 import kotlinx.coroutines.launch
 
@@ -88,21 +86,18 @@ fun WithScaffold(
             }
         ),
     )
-    val defaultListAndSetting = ListAndSetting(
-        list = ListInfo(
-            id = -1,
-            name = "",
-            enabled = false,
-            handleType = AppHandleType.NOTIFICATION_ONLY
-        ), settings = listOf()
-    )
+
     BottomSheetScaffold(
         scaffoldState = scaffoldState,
         sheetPeekHeight = 0.dp,
         sheetContent = {
-            sheetContent(listAndSetting ?: defaultListAndSetting) {
-                scope.launch {
-                    scaffoldState.bottomSheetState.collapse()
+            if (listAndSetting == null){
+                Log.w("App", "bottomSheetState:${ scaffoldState.bottomSheetState.currentValue}")
+            }else {
+                sheetContent(listAndSetting) {
+                    scope.launch {
+                        scaffoldState.bottomSheetState.collapse()
+                    }
                 }
             }
         },
