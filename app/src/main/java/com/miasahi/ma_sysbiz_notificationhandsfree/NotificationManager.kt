@@ -32,7 +32,7 @@ class MyNotificationListenerService : NotificationListenerService(), TextToSpeec
     private val audioFocusRequest =
         AudioFocusRequest.Builder(AudioManager.AUDIOFOCUS_GAIN_TRANSIENT_MAY_DUCK)
             .setAcceptsDelayedFocusGain(false).setWillPauseWhenDucked(false).build()
-
+    private var currentLocale: Locale? = null
     var messageQueue = ArrayDeque<String>()
     var isSpeaking = false
     override fun onCreate() {
@@ -89,18 +89,25 @@ class MyNotificationListenerService : NotificationListenerService(), TextToSpeec
         if (status != TextToSpeech.SUCCESS) {
             return
         }
+        updateTTSLanguage()
+    }
+    private fun updateTTSLanguage() {
+        val locale = Locale.getDefault()
+        if (locale == currentLocale){
+            return
+        }
+        currentLocale = locale
+        val setting = if (locale == Locale.JAPAN || locale == Locale.JAPANESE) Locale.JAPAN else Locale.US
         textToSpeech?.let { tts ->
-            val locale = Locale.getDefault()
             Log.d(TAG, "[tts] availableLanguages:${tts.availableLanguages}")
-            if (tts.isLanguageAvailable(locale) > TextToSpeech.LANG_AVAILABLE) {
-                tts.language = locale
-                Log.d(TAG, "[tts] language set($locale).")
+            if (tts.isLanguageAvailable(setting) > TextToSpeech.LANG_AVAILABLE) {
+                tts.language = setting
+                Log.d(TAG, "[tts] language set($setting).")
             } else {
                 Log.w(TAG, "[tts] language setting failed.")
             }
         }
     }
-
     private suspend fun handleNotification(sbn: StatusBarNotification) {
         val packageName = sbn.packageName
         Log.d(TAG, "[handleNotification] IN ${sbn.packageName}")
@@ -113,9 +120,18 @@ class MyNotificationListenerService : NotificationListenerService(), TextToSpeec
         val title = extras.getString(Notification.EXTRA_TITLE)
         val text = extras.getCharSequence(Notification.EXTRA_TEXT)
 
-        val speakText =
+        updateTTSLanguage()
+        Log.d(TAG,"currentLocale:$currentLocale")
+
+        val speakTextJP =
             if (handleType == AppHandleType.NOTIFICATION_ONLY) "${appName}で${title}からメッセージが届きました。"
             else "${appName}で${title}からメッセージが届きました。$text"
+        val speakTextEN =
+            if (handleType == AppHandleType.NOTIFICATION_ONLY) "From $appName $title"
+            else "From $appName\n $title\n $text"
+        val speakText =
+            if (currentLocale == Locale.JAPAN || currentLocale == Locale.JAPANESE) speakTextJP
+            else speakTextEN
         messageQueue.add(speakText)
         speak()
         Log.d(
