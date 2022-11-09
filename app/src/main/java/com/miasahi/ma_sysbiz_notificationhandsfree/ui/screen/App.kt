@@ -27,16 +27,22 @@ fun App(listInfoDao: ListInfoDao, settingInfoDao: SettingInfoDao) {
         WithScaffold(
             listAndSetting = listAndSetting.value,
             sheetContent = { data, onDismiss ->
-                Log.d(TAG, "[SheetContent] list:${data.list}")
-                ListSettingScreen(listAndSetting = data, onSave = { listInfo, settingInfos ->
-                    scope.launch {
-                        listInfoDao.insert(listInfo = listInfo)
-                        settingInfoDao.delete(listId = listInfo.id)
-                        settingInfoDao.insertAll(settingInfos)
-                        Log.d(TAG, "[onSave] saved")
-                        onDismiss()
-                    }
-                })
+                Log.d(TAG, "[SheetContent] list:${data?.list}")
+                if (data == null) {
+                    listAndSetting.value = null
+                    onDismiss()
+                } else {
+                    ListSettingScreen(listAndSetting = data, onSave = { listInfo, settingInfos ->
+                        scope.launch {
+                            listInfoDao.insert(listInfo = listInfo)
+                            settingInfoDao.delete(listId = listInfo.id)
+                            settingInfoDao.insertAll(settingInfos)
+                            Log.d(TAG, "[onSave] saved")
+                            listAndSetting.value = null
+                            onDismiss()
+                        }
+                    })
+                }
             },
             body = { onShowBottomSheet ->
                 MainScreen(
@@ -69,7 +75,7 @@ fun WithAppTheme(content: @Composable () -> Unit) {
 @Composable
 fun WithScaffold(
     listAndSetting: ListAndSetting?,
-    sheetContent: @Composable (ListAndSetting, onDismiss: () -> Unit) -> Unit,
+    sheetContent: @Composable (ListAndSetting?, onDismiss: () -> Unit) -> Unit,
     body: @Composable (onShowBottomSheet: (Boolean) -> Unit) -> Unit,
     onDismiss: () -> Unit
 ) {
@@ -91,13 +97,9 @@ fun WithScaffold(
         scaffoldState = scaffoldState,
         sheetPeekHeight = 0.dp,
         sheetContent = {
-            if (listAndSetting == null){
-                Log.w("App", "bottomSheetState:${ scaffoldState.bottomSheetState.currentValue}")
-            }else {
-                sheetContent(listAndSetting) {
-                    scope.launch {
-                        scaffoldState.bottomSheetState.collapse()
-                    }
+            sheetContent(listAndSetting) {
+                scope.launch {
+                    scaffoldState.bottomSheetState.collapse()
                 }
             }
         },

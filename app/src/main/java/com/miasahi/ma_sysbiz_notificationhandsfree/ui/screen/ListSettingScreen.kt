@@ -59,6 +59,7 @@ fun ListSettingScreen(
             modifier = Modifier.fillMaxSize()
         ) {
             TitleRow(onSave = {
+                localFocusManager.clearFocus()
                 onSave(screenState.listInfo, screenState.settingInfos)
             })
             NameRow(name = screenState.listInfo.name, onEdit = screenState.onChangeName)
